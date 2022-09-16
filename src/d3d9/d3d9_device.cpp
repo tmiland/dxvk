@@ -2016,6 +2016,7 @@ namespace dxvk {
 
           break;
         }
+        case D3DRS_CLIPPING:
         case D3DRS_CULLMODE:
         case D3DRS_FILLMODE:
           m_flags.set(D3D9DeviceFlag::DirtyRasterizerState);
@@ -5829,7 +5830,7 @@ namespace dxvk {
     DxvkRasterizerState state = { };
     state.cullMode        = DecodeCullMode(D3DCULL(rs[D3DRS_CULLMODE]));
     state.depthBiasEnable = IsDepthBiasEnabled();
-    state.depthClipEnable = true;
+    state.depthClipEnable = !!rs[D3DRS_CLIPPING];
     state.frontFace       = VK_FRONT_FACE_CLOCKWISE;
     state.polygonMode     = DecodeFillMode(D3DFILLMODE(rs[D3DRS_FILLMODE]));
     state.flatShading     = m_state.renderStates[D3DRS_SHADEMODE] == D3DSHADE_FLAT;
@@ -7049,6 +7050,7 @@ namespace dxvk {
 
     rs[D3DRS_FILLMODE]            = D3DFILL_SOLID;
     rs[D3DRS_CULLMODE]            = D3DCULL_CCW;
+    rs[D3DRS_CLIPPING]            = TRUE;
     rs[D3DRS_DEPTHBIAS]           = bit::cast<DWORD>(0.0f);
     rs[D3DRS_SLOPESCALEDEPTHBIAS] = bit::cast<DWORD>(0.0f);
     BindRasterizerState();
@@ -7135,7 +7137,6 @@ namespace dxvk {
     rs[D3DRS_WRAP5]                      = 0;
     rs[D3DRS_WRAP6]                      = 0;
     rs[D3DRS_WRAP7]                      = 0;
-    rs[D3DRS_CLIPPING]                   = TRUE;
     rs[D3DRS_MULTISAMPLEANTIALIAS]       = TRUE;
     rs[D3DRS_PATCHEDGESTYLE]             = D3DPATCHEDGE_DISCRETE;
     rs[D3DRS_DEBUGMONITORTOKEN]          = D3DDMT_ENABLE;
