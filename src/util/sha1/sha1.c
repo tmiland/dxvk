@@ -133,7 +133,8 @@ SHA1Update(SHA1_CTX *context, const uint8_t *data, size_t len)
 	} else {
 		i = 0;
 	}
-	(void)memcpy(&context->buffer[j], &data[i], len - i);
+	if (len - i)
+		(void)memcpy(&context->buffer[j], &data[i], len - i);
 }
 
 
