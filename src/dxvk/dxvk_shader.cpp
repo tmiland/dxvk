@@ -997,10 +997,10 @@ namespace dxvk {
     // If this is not the first time we're compiling the pipeline,
     // try to get a cache hit using the shader module identifier
     // so that we don't have to decompress our SPIR-V shader again.
-    if (m_compiledOnce && canUsePipelineCacheControl()) {
-      pipeline = this->compileShaderPipeline(args, stage,
-        VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT);
-    }
+    // if (m_compiledOnce && canUsePipelineCacheControl()) {
+    //   pipeline = this->compileShaderPipeline(args, stage,
+    //     VK_PIPELINE_CREATE_FAIL_ON_PIPELINE_COMPILE_REQUIRED_BIT);
+    // }
 
     if (!pipeline)
       pipeline = this->compileShaderPipeline(args, stage, 0);
