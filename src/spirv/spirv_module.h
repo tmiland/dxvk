@@ -2,10 +2,59 @@
 
 #include <unordered_set>
 
+#include "../dxvk/dxvk_hash.h"
+
 #include "spirv_code_buffer.h"
 
 namespace dxvk {
-  
+
+  struct alignas(16) SpirvPackedData {
+    static constexpr size_t DwordCount = 8;
+
+    SpirvPackedData() {
+      std::memset(data, 0, sizeof(data));
+    }
+
+    uint32_t data[DwordCount];
+
+    bool eq(const SpirvPackedData& other) const {
+      return bit::bcmpeq(this, &other);
+    }
+
+    size_t hash() const {
+      DxvkHashState hash;
+      for (size_t i = 0; i < DwordCount; i++)
+        hash.add(data[i]);
+      return hash;
+    }
+
+    bool packConst(spv::Op op, uint32_t typeId, uint32_t argCount, const uint32_t* args) {
+      if (argCount + 2 > DwordCount)
+        return false;
+
+      data[0] = uint32_t(op);
+      data[1] = typeId;
+
+      for (uint32_t i = 0; i < argCount; i++)
+        data[2 + i] = args[i];
+
+      return true;
+    }
+
+    bool packType(spv::Op op, uint32_t argCount, const uint32_t* args) {
+      if (argCount + 2 > DwordCount)
+        return false;
+
+      data[0] = uint32_t(op);
+      data[1] = argCount;
+
+      for (uint32_t i = 0; i < argCount; i++)
+        data[2 + i] = args[i];
+
+      return true;
+    }
+  };
+
   struct SpirvPhiLabel {
     uint32_t varId         = 0;
     uint32_t labelId       = 0;
@@ -1283,7 +1332,7 @@ namespace dxvk {
     SpirvCodeBuffer m_variables;
     SpirvCodeBuffer m_code;
 
-    std::unordered_set<uint32_t> m_lateConsts;
+    std::unordered_map<SpirvPackedData, uint32_t, DxvkHash, DxvkEq> m_packedIds;
 
     std::vector<uint32_t> m_interfaceVars;
 

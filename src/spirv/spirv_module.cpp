@@ -473,7 +473,6 @@ namespace dxvk {
   uint32_t SpirvModule::lateConst32(
           uint32_t                typeId) {
     uint32_t resultId = this->allocateId();
-    m_lateConsts.insert(resultId);
 
     m_typeConstDefs.putIns (spv::OpConstant, 4);
     m_typeConstDefs.putWord(typeId);
@@ -3707,18 +3706,28 @@ namespace dxvk {
           spv::Op                 op, 
           uint32_t                argCount,
     const uint32_t*               argIds) {
-    // Since the type info is stored in the code buffer,
-    // we can use the code buffer to look up type IDs as
-    // well. Result IDs are always stored as argument 1.
-    for (auto ins : m_typeConstDefs) {
-      bool match = ins.opCode() == op
-                && ins.length() == 2 + argCount;
-      
-      for (uint32_t i = 0; i < argCount && match; i++)
-        match &= ins.arg(2 + i) == argIds[i];
-      
-      if (match)
-        return ins.arg(1);
+    SpirvPackedData key;
+
+    // Avoid declaring identical types multiple times
+    bool packed = key.packType(op, argCount, argIds);
+
+    if (packed) {
+      auto entry = m_packedIds.find(key);
+
+      if (entry != m_packedIds.end())
+        return entry->second;
+    } else {
+      // Fallback for very large type declarations
+      for (auto ins : m_typeConstDefs) {
+        bool match = ins.opCode() == op
+                  && ins.length() == 2 + argCount;
+
+        for (uint32_t i = 0; i < argCount && match; i++)
+          match &= ins.arg(2 + i) == argIds[i];
+
+        if (match)
+          return ins.arg(1);
+      }
     }
     
     // Type not yet declared, create a new one.
@@ -3728,6 +3737,10 @@ namespace dxvk {
     
     for (uint32_t i = 0; i < argCount; i++)
       m_typeConstDefs.putWord(argIds[i]);
+
+    if (packed)
+      m_packedIds.insert({ key, resultId });
+
     return resultId;
   }
   
@@ -3737,22 +3750,29 @@ namespace dxvk {
           uint32_t                typeId,
           uint32_t                argCount,
     const uint32_t*               argIds) {
-    // Avoid declaring constants multiple times
-    for (auto ins : m_typeConstDefs) {
-      bool match = ins.opCode() == op
-                && ins.length() == 3 + argCount
-                && ins.arg(1)   == typeId;
-      
-      for (uint32_t i = 0; i < argCount && match; i++)
-        match &= ins.arg(3 + i) == argIds[i];
-      
-      if (!match)
-        continue;
-      
-      uint32_t id = ins.arg(2);
+    SpirvPackedData key;
 
-      if (m_lateConsts.find(id) == m_lateConsts.end())
-        return id;
+    // Avoid declaring constants multiple times
+    bool packed = key.packConst(op, typeId, argCount, argIds);
+
+    if (packed) {
+      auto entry = m_packedIds.find(key);
+
+      if (entry != m_packedIds.end())
+        return entry->second;
+    } else {
+      // Fallback for very large constants
+      for (auto ins : m_typeConstDefs) {
+        bool match = ins.opCode() == op
+                  && ins.length() == 3 + argCount
+                  && ins.arg(1)   == typeId;
+
+        for (uint32_t i = 0; i < argCount && match; i++)
+          match &= ins.arg(3 + i) == argIds[i];
+
+        if (match)
+          return ins.arg(2);
+      }
     }
     
     // Constant not yet declared, make a new one
@@ -3763,6 +3783,10 @@ namespace dxvk {
     
     for (uint32_t i = 0; i < argCount; i++)
       m_typeConstDefs.putWord(argIds[i]);
+
+    if (packed)
+      m_packedIds.insert({ key, resultId });
+
     return resultId;
   }
   
